@@ -9,10 +9,21 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { MockAuth, type User } from "@/lib/auth/mock-auth"
+import { createClient } from "@/lib/supabase/client"
+import { redirect } from "next/navigation"
+
+interface Profile {
+  id: string
+  user_type: string
+  organization_name: string | null
+  contact_person: string | null
+  phone: string | null
+  address: string | null
+  points: number
+}
 
 export default function RestaurantPortal() {
-  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [foodListed, setFoodListed] = useState(false)
   const [formData, setFormData] = useState({
@@ -23,24 +34,83 @@ export default function RestaurantPortal() {
     contact: "",
   })
 
-  const handleListFood = () => {
-    setFoodListed(true)
-    setFormData({
-      foodType: "",
-      quantity: "",
-      description: "",
-      pickupTime: "",
-      contact: "",
-    })
-    setTimeout(() => {
-      setFoodListed(false)
-    }, 3000)
+  const handleListFood = async () => {
+    if (!profile) return
+
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase.from("food_listings").insert({
+        restaurant_id: profile.id,
+        title: formData.foodType,
+        description: formData.description,
+        quantity: formData.quantity,
+        expiry_time: formData.pickupTime,
+        pickup_location: profile.address || "Restaurant location",
+        status: "available",
+      })
+
+      if (error) {
+        console.error("Error listing food:", error)
+        return
+      }
+
+      setFoodListed(true)
+      setFormData({
+        foodType: "",
+        quantity: "",
+        description: "",
+        pickupTime: "",
+        contact: "",
+      })
+      setTimeout(() => {
+        setFoodListed(false)
+      }, 3000)
+    } catch (error) {
+      console.error("Error:", error)
+    }
   }
 
   useEffect(() => {
-    const currentUser = MockAuth.getCurrentUser()
-    setUser(currentUser)
-    setLoading(false)
+    const loadProfile = async () => {
+      try {
+        const supabase = createClient()
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser()
+
+        if (userError || !user) {
+          redirect("/auth/login")
+          return
+        }
+
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single()
+
+        if (profileError) {
+          console.error("Error loading profile:", profileError)
+          redirect("/auth/login")
+          return
+        }
+
+        if (profileData.user_type !== "restaurant") {
+          redirect("/auth/login")
+          return
+        }
+
+        setProfile(profileData)
+      } catch (error) {
+        console.error("Error:", error)
+        redirect("/auth/login")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProfile()
   }, [])
 
   if (loading) {
@@ -54,7 +124,7 @@ export default function RestaurantPortal() {
     )
   }
 
-  if (!user) {
+  if (!profile) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -68,7 +138,7 @@ export default function RestaurantPortal() {
     )
   }
 
-  const displayName = user.organizationName || user.contactPerson || user.email.split("@")[0]
+  const displayName = profile.organization_name || profile.contact_person || "Restaurant"
 
   return (
     <div className="min-h-screen bg-background">
@@ -92,7 +162,7 @@ export default function RestaurantPortal() {
             </div>
             <div className="flex items-center gap-4">
               <Badge variant="secondary" className="hidden md:flex">
-                ⭐ 0 Points
+                ⭐ {profile.points} Points
               </Badge>
               <Button variant="outline" size="sm">
                 Dashboard
@@ -234,15 +304,19 @@ export default function RestaurantPortal() {
                     <span className="text-2xl">🏢</span>
                   </div>
                   <h3 className="font-semibold">{displayName}</h3>
-                  <p className="text-sm text-muted-foreground">New member - just joined!</p>
+                  <p className="text-sm text-muted-foreground">Restaurant Partner</p>
                 </div>
 
                 <div className="space-y-2 text-sm">
-                  {user.address && (
-                    <div className="flex items-center gap-2 text-muted-foreground">📍 {user.address}</div>
+                  {profile.address && (
+                    <div className="flex items-center gap-2 text-muted-foreground">📍 {profile.address}</div>
                   )}
-                  {user.phone && <div className="flex items-center gap-2 text-muted-foreground">📞 {user.phone}</div>}
-                  <div className="flex items-center gap-2 text-muted-foreground">✉️ {user.email}</div>
+                  {profile.phone && (
+                    <div className="flex items-center gap-2 text-muted-foreground">📞 {profile.phone}</div>
+                  )}
+                  {profile.contact_person && (
+                    <div className="flex items-center gap-2 text-muted-foreground">👤 {profile.contact_person}</div>
+                  )}
                 </div>
 
                 <Button variant="outline" size="sm" className="w-full bg-transparent">
@@ -258,7 +332,7 @@ export default function RestaurantPortal() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-primary mb-1">0</div>
+                  <div className="text-3xl font-bold text-primary mb-1">{profile.points}</div>
                   <div className="text-sm text-muted-foreground">Total Points</div>
                 </div>
 

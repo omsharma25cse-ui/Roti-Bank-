@@ -11,6 +11,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { createClient } from "@/lib/supabase/client"
 
 export default function SignUpPage() {
   const [email, setEmail] = useState("")
@@ -43,12 +44,29 @@ export default function SignUpPage() {
     }
 
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const supabase = createClient()
+      const { data, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/${userType}`,
+          data: {
+            user_type: userType,
+            organization_name: organizationName,
+            contact_person: userType === "volunteer" ? undefined : contactPerson,
+            phone: phone,
+            address: address,
+          },
+        },
+      })
 
-      router.push("/auth/sign-up-success")
+      if (authError) {
+        setError(authError.message)
+      } else if (data.user) {
+        router.push("/auth/sign-up-success")
+      }
     } catch (error: unknown) {
-      setError("Sign up failed. Please try again.")
+      setError(error instanceof Error ? error.message : "Sign up failed. Please try again.")
     } finally {
       setIsLoading(false)
     }

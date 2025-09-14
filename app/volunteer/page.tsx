@@ -6,94 +6,130 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { MockAuth, type User } from "@/lib/auth/mock-auth"
+import { createClient } from "@/lib/supabase/client"
+import { redirect } from "next/navigation"
+
+interface Profile {
+  id: string
+  user_type: string
+  organization_name: string | null
+  contact_person: string | null
+  phone: string | null
+  address: string | null
+  points: number
+}
+
+interface FoodListing {
+  id: string
+  title: string
+  description: string
+  quantity: string
+  expiry_time: string
+  pickup_location: string
+  status: string
+  created_at: string
+  profiles: {
+    organization_name: string | null
+    contact_person: string | null
+    phone: string | null
+  }
+}
 
 export default function VolunteerPortal() {
-  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [foodListings, setFoodListings] = useState<FoodListing[]>([])
   const [loading, setLoading] = useState(true)
-  const [acceptedPickups, setAcceptedPickups] = useState<Set<number>>(new Set())
+  const [acceptedPickups, setAcceptedPickups] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    const currentUser = MockAuth.getCurrentUser()
-    setUser(currentUser)
-    setLoading(false)
+    const loadData = async () => {
+      try {
+        const supabase = createClient()
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser()
+
+        if (userError || !user) {
+          redirect("/auth/login")
+          return
+        }
+
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single()
+
+        if (profileError) {
+          console.error("Error loading profile:", profileError)
+          redirect("/auth/login")
+          return
+        }
+
+        if (profileData.user_type !== "volunteer") {
+          redirect("/auth/login")
+          return
+        }
+
+        setProfile(profileData)
+
+        // Load available food listings
+        const { data: listingsData, error: listingsError } = await supabase
+          .from("food_listings")
+          .select(`
+            *,
+            profiles!food_listings_restaurant_id_fkey (
+              organization_name,
+              contact_person,
+              phone
+            )
+          `)
+          .eq("status", "available")
+          .order("created_at", { ascending: false })
+
+        if (listingsError) {
+          console.error("Error loading food listings:", listingsError)
+        } else {
+          setFoodListings(listingsData || [])
+        }
+      } catch (error) {
+        console.error("Error:", error)
+        redirect("/auth/login")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
   }, [])
 
-  const handleAcceptPickup = (pickupId: number) => {
-    setAcceptedPickups((prev) => new Set([...prev, pickupId]))
-  }
+  const handleAcceptPickup = async (listingId: string) => {
+    if (!profile) return
 
-  const randomMesses = [
-    {
-      id: 1,
-      restaurant: "Om Sharma's Kitchen",
-      type: "Sandwiches",
-      description: "Fresh sandwiches - 50 pieces",
-      location: "Contact: Om Sharma for pickup details",
-      distance: "Contact for location",
-      time: "Made on 14/9/25 - Available now",
-      urgency: "high",
-      destination: "Emergency Food Distribution",
-      contact: "Om Sharma",
-      quantity: "50 Sandwiches",
-      madeDate: "14/9/25",
-    },
-    {
-      id: 2,
-      restaurant: "Green Garden Cafe",
-      type: "Cooked Meals",
-      description: "Fresh vegetarian curry and rice - 30 servings",
-      location: "123 Main Street, Downtown",
-      distance: "0.8 miles",
-      time: "Available until 8:00 PM today",
-      urgency: "high",
-      destination: "Community Food Bank",
-    },
-    {
-      id: 3,
-      restaurant: "University Mess Hall",
-      type: "Fresh Produce",
-      description: "Assorted vegetables and fruits - 15 kg",
-      location: "456 Campus Drive",
-      distance: "1.2 miles",
-      time: "Available until 7:00 PM today",
-      urgency: "medium",
-      destination: "Local Shelter",
-    },
-    {
-      id: 4,
-      restaurant: "Downtown Bistro",
-      type: "Baked Goods",
-      description: "Fresh bread and pastries - 25 items",
-      location: "789 Business Ave",
-      distance: "2.1 miles",
-      time: "Available until 6:00 PM today",
-      urgency: "low",
-      destination: "Senior Center",
-    },
-    {
-      id: 5,
-      restaurant: "Spice Junction",
-      type: "Cooked Meals",
-      description: "Indian curry and naan bread - 40 servings",
-      location: "321 Food Street",
-      distance: "1.5 miles",
-      time: "Available until 9:00 PM today",
-      urgency: "medium",
-      destination: "Youth Center",
-    },
-    {
-      id: 6,
-      restaurant: "Fresh Bites Cafe",
-      type: "Packaged Food",
-      description: "Sealed sandwiches and salads - 20 items",
-      location: "654 Market Road",
-      distance: "0.9 miles",
-      time: "Available until 7:30 PM today",
-      urgency: "high",
-      destination: "Homeless Shelter",
-    },
-  ]
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from("food_listings")
+        .update({
+          volunteer_id: profile.id,
+          status: "accepted",
+        })
+        .eq("id", listingId)
+
+      if (error) {
+        console.error("Error accepting pickup:", error)
+        return
+      }
+
+      setAcceptedPickups((prev) => new Set([...prev, listingId]))
+
+      // Remove from available listings
+      setFoodListings((prev) => prev.filter((listing) => listing.id !== listingId))
+    } catch (error) {
+      console.error("Error:", error)
+    }
+  }
 
   if (loading) {
     return (
@@ -106,7 +142,7 @@ export default function VolunteerPortal() {
     )
   }
 
-  if (!user) {
+  if (!profile) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -128,7 +164,26 @@ export default function VolunteerPortal() {
       .toUpperCase()
   }
 
-  const displayName = user.organizationName || user.contactPerson || user.email.split("@")[0]
+  const displayName = profile.organization_name || profile.contact_person || "Volunteer"
+
+  // Add the high demand listing at the top
+  const highDemandListing = {
+    id: "high-demand-1",
+    title: "Sandwiches",
+    description: "Fresh sandwiches - 50 pieces",
+    quantity: "50",
+    expiry_time: new Date().toISOString(),
+    pickup_location: "Contact: Om Sharma for pickup details",
+    status: "available",
+    created_at: "2025-09-14T00:00:00Z",
+    profiles: {
+      organization_name: "Om Sharma's Kitchen",
+      contact_person: "Om Sharma",
+      phone: "+91 9876543210",
+    },
+  }
+
+  const allListings = [highDemandListing, ...foodListings]
 
   return (
     <div className="min-h-screen bg-background">
@@ -184,77 +239,80 @@ export default function VolunteerPortal() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {randomMesses.map((pickup) => (
-                    <div
-                      key={pickup.id}
-                      className="p-4 border border-border rounded-lg hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-semibold">{pickup.restaurant}</h4>
-                            <Badge
-                              variant={
-                                pickup.urgency === "high"
-                                  ? "destructive"
-                                  : pickup.urgency === "medium"
-                                    ? "default"
-                                    : "secondary"
-                              }
-                              className="text-xs"
-                            >
-                              {pickup.urgency === "high"
-                                ? "HIGH DEMAND"
-                                : pickup.urgency === "medium"
-                                  ? "Medium"
-                                  : "Low"}{" "}
-                              Priority
-                            </Badge>
-                          </div>
-                          <p className="text-sm font-medium text-secondary">{pickup.type}</p>
-                          <p className="text-sm text-muted-foreground mb-2">{pickup.description}</p>
+                  {allListings.map((pickup, index) => {
+                    const isHighDemand = pickup.id === "high-demand-1"
+                    const restaurantName = pickup.profiles?.organization_name || "Restaurant"
+                    const contactPerson = pickup.profiles?.contact_person || "Contact"
+                    const isExpiringSoon = new Date(pickup.expiry_time) < new Date(Date.now() + 2 * 60 * 60 * 1000)
 
-                          <div className="grid md:grid-cols-2 gap-2 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              📍 {pickup.location} {pickup.distance && `(${pickup.distance})`}
+                    return (
+                      <div
+                        key={pickup.id}
+                        className="p-4 border border-border rounded-lg hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-semibold">{restaurantName}</h4>
+                              <Badge
+                                variant={isHighDemand || isExpiringSoon ? "destructive" : "default"}
+                                className="text-xs"
+                              >
+                                {isHighDemand ? "HIGH DEMAND" : isExpiringSoon ? "URGENT" : "Available"}
+                              </Badge>
                             </div>
-                            <div className="flex items-center gap-1">🕐 {pickup.time}</div>
-                          </div>
+                            <p className="text-sm font-medium text-secondary">{pickup.title}</p>
+                            <p className="text-sm text-muted-foreground mb-2">{pickup.description}</p>
 
-                          {pickup.contact && (
+                            <div className="grid md:grid-cols-2 gap-2 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-1">📍 {pickup.pickup_location}</div>
+                              <div className="flex items-center gap-1">
+                                🕐{" "}
+                                {isHighDemand
+                                  ? "Made on 14/9/25 - Available now"
+                                  : `Available until ${new Date(pickup.expiry_time).toLocaleTimeString()}`}
+                              </div>
+                            </div>
+
                             <div className="mt-2 text-sm">
                               <span className="text-muted-foreground">Contact: </span>
-                              <span className="font-medium text-primary">{pickup.contact}</span>
+                              <span className="font-medium text-primary">{contactPerson}</span>
                             </div>
-                          )}
 
-                          <div className="mt-2 text-sm">
-                            <span className="text-muted-foreground">Deliver to: </span>
-                            <span className="font-medium">{pickup.destination}</span>
+                            <div className="mt-2 text-sm">
+                              <span className="text-muted-foreground">Quantity: </span>
+                              <span className="font-medium">{pickup.quantity} servings</span>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col gap-2 ml-4">
+                            {acceptedPickups.has(pickup.id) ? (
+                              <Button size="sm" className="whitespace-nowrap bg-green-600 hover:bg-green-700" disabled>
+                                ✅ Pickup Accepted
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                className="whitespace-nowrap"
+                                onClick={() => handleAcceptPickup(pickup.id)}
+                              >
+                                Accept Pickup
+                              </Button>
+                            )}
+                            <Button variant="outline" size="sm" className="whitespace-nowrap bg-transparent">
+                              📍 View Route
+                            </Button>
                           </div>
                         </div>
-
-                        <div className="flex flex-col gap-2 ml-4">
-                          {acceptedPickups.has(pickup.id) ? (
-                            <Button size="sm" className="whitespace-nowrap bg-green-600 hover:bg-green-700" disabled>
-                              ✅ Pickup Accepted
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              className="whitespace-nowrap"
-                              onClick={() => handleAcceptPickup(pickup.id)}
-                            >
-                              Accept Pickup
-                            </Button>
-                          )}
-                          <Button variant="outline" size="sm" className="whitespace-nowrap bg-transparent">
-                            📍 View Route
-                          </Button>
-                        </div>
                       </div>
+                    )
+                  })}
+
+                  {allListings.length === 1 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>No additional pickups available at the moment. Check back soon!</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -283,19 +341,23 @@ export default function VolunteerPortal() {
               <CardContent className="space-y-4">
                 <div className="text-center">
                   <Avatar className="w-16 h-16 mx-auto mb-3">
-                    <AvatarImage src="/placeholder.svg" />
+                    <AvatarImage src="/volunteer-profile.jpg" />
                     <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
                   </Avatar>
                   <h3 className="font-semibold">{displayName}</h3>
-                  <p className="text-sm text-muted-foreground">New volunteer - just joined!</p>
+                  <p className="text-sm text-muted-foreground">Volunteer</p>
                 </div>
 
                 <div className="space-y-2 text-sm">
-                  {user.address && (
-                    <div className="flex items-center gap-2 text-muted-foreground">📍 {user.address}</div>
+                  {profile.address && (
+                    <div className="flex items-center gap-2 text-muted-foreground">📍 {profile.address}</div>
                   )}
-                  {user.phone && <div className="flex items-center gap-2 text-muted-foreground">📞 {user.phone}</div>}
-                  <div className="flex items-center gap-2 text-muted-foreground">✉️ {user.email}</div>
+                  {profile.phone && (
+                    <div className="flex items-center gap-2 text-muted-foreground">📞 {profile.phone}</div>
+                  )}
+                  {profile.contact_person && (
+                    <div className="flex items-center gap-2 text-muted-foreground">👤 {profile.contact_person}</div>
+                  )}
                 </div>
 
                 <Button variant="outline" size="sm" className="w-full bg-transparent">

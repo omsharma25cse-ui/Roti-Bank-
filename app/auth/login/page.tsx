@@ -10,7 +10,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { MockAuth } from "@/lib/auth/mock-auth"
+import { createClient } from "@/lib/supabase/client"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -32,13 +32,24 @@ export default function LoginPage() {
     }
 
     try {
-      const { user, error } = await MockAuth.signIn(email, password)
+      const supabase = createClient()
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-      if (error) {
-        setError(error)
-      } else if (user) {
-        // Verify user type matches selection
-        if (user.userType !== userType) {
+      if (authError) {
+        setError(authError.message)
+      } else if (data.user) {
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("user_type")
+          .eq("id", data.user.id)
+          .single()
+
+        if (profileError) {
+          setError("Failed to load user profile")
+        } else if (profile?.user_type !== userType) {
           setError("User type doesn't match your selection")
         } else {
           router.push(`/${userType}`)

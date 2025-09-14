@@ -10,7 +10,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { MockAuth } from "@/lib/auth/mock-auth"
+import { createClient } from "@/lib/supabase/client"
 
 export default function VolunteerRegistrationPage() {
   const [email, setEmail] = useState("")
@@ -35,19 +35,25 @@ export default function VolunteerRegistrationPage() {
     }
 
     try {
-      const { user, error } = await MockAuth.signUp({
+      const supabase = createClient()
+      const { data, error: authError } = await supabase.auth.signUp({
         email,
         password,
-        userType: "volunteer",
-        organizationName: fullName,
-        phone,
-        address,
+        options: {
+          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/volunteer`,
+          data: {
+            user_type: "volunteer",
+            organization_name: fullName,
+            phone: phone,
+            address: address,
+          },
+        },
       })
 
-      if (error) {
-        setError(error)
-      } else if (user) {
-        router.push("/volunteer")
+      if (authError) {
+        setError(authError.message)
+      } else if (data.user) {
+        router.push("/auth/sign-up-success")
       }
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")

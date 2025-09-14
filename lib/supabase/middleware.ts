@@ -1,31 +1,8 @@
-import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { NextResponse, type NextRequest } from "next/server"
 
 export async function updateSession(request: NextRequest) {
-  const supabaseResponse = NextResponse.next({
-    request,
-  })
+  console.log("[v0] Middleware running for:", request.nextUrl.pathname)
 
-  const supabase = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  )
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (
-    request.nextUrl.pathname !== "/" &&
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth")
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
-    const url = request.nextUrl.clone()
-    url.pathname = "/auth/login"
-    return NextResponse.redirect(url)
-  }
-
-  return supabaseResponse
+  // We'll handle authentication in the components instead
+  return NextResponse.next()
 }
