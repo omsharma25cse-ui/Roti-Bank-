@@ -1,0 +1,193 @@
+"use client"
+
+import type React from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import Link from "next/link"
+import Image from "next/image"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+
+export default function SignUpPage() {
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [repeatPassword, setRepeatPassword] = useState("")
+  const [userType, setUserType] = useState<string>("")
+  const [organizationName, setOrganizationName] = useState("")
+  const [contactPerson, setContactPerson] = useState("")
+  const [phone, setPhone] = useState("")
+  const [address, setAddress] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError(null)
+
+    if (password !== repeatPassword) {
+      setError("Passwords do not match")
+      setIsLoading(false)
+      return
+    }
+
+    if (!userType) {
+      setError("Please select your portal type")
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      // Simulate API call delay
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      router.push("/auth/sign-up-success")
+    } catch (error: unknown) {
+      setError("Sign up failed. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-light-green flex items-center justify-center p-6">
+      <div className="w-full max-w-md">
+        <div className="flex flex-col gap-6">
+          <div className="text-center">
+            <Image
+              src="/roti-bank-logo.png"
+              alt="Roti Bank Logo"
+              width={80}
+              height={80}
+              className="mx-auto mb-4 rounded-full"
+            />
+            <h1 className="text-2xl font-bold text-foreground">Join Roti Bank</h1>
+            <p className="text-muted-foreground">Create your account to start making a difference</p>
+          </div>
+
+          <Card className="animate-fade-in-up">
+            <CardHeader>
+              <CardTitle className="text-2xl">Sign up</CardTitle>
+              <CardDescription>Create a new account for your portal</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSignUp}>
+                <div className="flex flex-col gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="userType">Portal Type</Label>
+                    <Select value={userType} onValueChange={setUserType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your portal type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="restaurant">Restaurant/Mess</SelectItem>
+                        <SelectItem value="volunteer">Volunteer</SelectItem>
+                        <SelectItem value="ngo">NGO</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="organizationName">
+                      {userType === "volunteer" ? "Full Name" : "Organization Name"}
+                    </Label>
+                    <Input
+                      id="organizationName"
+                      placeholder={userType === "volunteer" ? "Your full name" : "Organization name"}
+                      required
+                      value={organizationName}
+                      onChange={(e) => setOrganizationName(e.target.value)}
+                    />
+                  </div>
+
+                  {userType !== "volunteer" && (
+                    <div className="grid gap-2">
+                      <Label htmlFor="contactPerson">Contact Person</Label>
+                      <Input
+                        id="contactPerson"
+                        placeholder="Primary contact person"
+                        required
+                        value={contactPerson}
+                        onChange={(e) => setContactPerson(e.target.value)}
+                      />
+                    </div>
+                  )}
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="+91 XXXXX XXXXX"
+                      required
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="address">Address</Label>
+                    <Textarea
+                      id="address"
+                      placeholder="Your address"
+                      required
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="your@email.com"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="repeat-password">Repeat Password</Label>
+                    <Input
+                      id="repeat-password"
+                      type="password"
+                      required
+                      value={repeatPassword}
+                      onChange={(e) => setRepeatPassword(e.target.value)}
+                    />
+                  </div>
+                  {error && <p className="text-sm text-destructive">{error}</p>}
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? "Creating account..." : "Sign up"}
+                  </Button>
+                </div>
+                <div className="mt-4 text-center text-sm">
+                  Already have an account?{" "}
+                  <Link href="/auth/login" className="underline underline-offset-4 text-primary hover:text-primary/80">
+                    Login
+                  </Link>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
+}

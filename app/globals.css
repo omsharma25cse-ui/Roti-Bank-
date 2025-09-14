@@ -1,0 +1,179 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Updated color tokens for Roti Bank green theme */
+  --background: oklch(0.98 0.02 120); /* Light green tint #f8fdf8 */
+  --foreground: oklch(0.25 0.05 140); /* Dark forest green #1a3d1a */
+  --card: oklch(0.99 0.01 120); /* Very light green #fcfefc */
+  --card-foreground: oklch(0.25 0.05 140); /* Dark forest green */
+  --popover: oklch(0.99 0.01 120); /* Very light green */
+  --popover-foreground: oklch(0.25 0.05 140); /* Dark forest green */
+  --primary: oklch(0.55 0.15 140); /* Forest green #22c55e */
+  --primary-foreground: oklch(1 0 0); /* White text on primary */
+  --secondary: oklch(0.75 0.12 85); /* Warm yellow-green #84cc16 */
+  --secondary-foreground: oklch(0.25 0.05 140); /* Dark forest green text */
+  --muted: oklch(0.96 0.02 120); /* Light green muted #f1f8f1 */
+  --muted-foreground: oklch(0.45 0.05 140); /* Medium green gray */
+  --accent: oklch(0.65 0.18 160); /* Bright emerald #10b981 */
+  --accent-foreground: oklch(1 0 0); /* White text on accent */
+  --destructive: oklch(0.55 0.25 15); /* Red for alerts */
+  --destructive-foreground: oklch(1 0 0); /* White text on destructive */
+  --border: oklch(0.9 0.02 120); /* Light green borders */
+  --input: oklch(1 0 0); /* White input backgrounds */
+  --ring: oklch(0.55 0.15 140 / 0.5); /* Green focus ring */
+  --chart-1: oklch(0.55 0.15 140); /* Forest green for charts */
+  --chart-2: oklch(0.75 0.12 85); /* Yellow-green for charts */
+  --chart-3: oklch(0.65 0.18 160); /* Emerald for charts */
+  --chart-4: oklch(0.45 0.12 200); /* Teal for charts */
+  --chart-5: oklch(0.8 0.15 60); /* Light yellow for charts */
+  --radius: 0.75rem;
+  --sidebar: oklch(0.96 0.02 120); /* Light green sidebar */
+  --sidebar-foreground: oklch(0.25 0.05 140); /* Dark forest green */
+  --sidebar-primary: oklch(0.55 0.15 140); /* Forest green primary */
+  --sidebar-primary-foreground: oklch(1 0 0); /* White text */
+  --sidebar-accent: oklch(0.65 0.18 160); /* Emerald accent */
+  --sidebar-accent-foreground: oklch(1 0 0); /* White text */
+  --sidebar-border: oklch(0.9 0.02 120); /* Light green borders */
+  --sidebar-ring: oklch(0.55 0.15 140 / 0.5); /* Green focus ring */
+}
+
+.dark {
+  --background: oklch(0.12 0.02 140);
+  --foreground: oklch(0.95 0.02 120);
+  --card: oklch(0.15 0.02 140);
+  --card-foreground: oklch(0.95 0.02 120);
+  --popover: oklch(0.15 0.02 140);
+  --popover-foreground: oklch(0.95 0.02 120);
+  --primary: oklch(0.55 0.15 140);
+  --primary-foreground: oklch(0.12 0.02 140);
+  --secondary: oklch(0.75 0.12 85);
+  --secondary-foreground: oklch(0.12 0.02 140);
+  --muted: oklch(0.22 0.02 140);
+  --muted-foreground: oklch(0.65 0.05 120);
+  --accent: oklch(0.65 0.18 160);
+  --accent-foreground: oklch(0.12 0.02 140);
+  --destructive: oklch(0.55 0.25 15);
+  --destructive-foreground: oklch(0.95 0.02 120);
+  --border: oklch(0.22 0.02 140);
+  --input: oklch(0.22 0.02 140);
+  --ring: oklch(0.55 0.15 140 / 0.5);
+  --chart-1: oklch(0.55 0.15 140);
+  --chart-2: oklch(0.75 0.12 85);
+  --chart-3: oklch(0.65 0.18 160);
+  --chart-4: oklch(0.45 0.12 200);
+  --chart-5: oklch(0.8 0.15 60);
+  --sidebar: oklch(0.18 0.02 140);
+  --sidebar-foreground: oklch(0.95 0.02 120);
+  --sidebar-primary: oklch(0.55 0.15 140);
+  --sidebar-primary-foreground: oklch(0.95 0.02 120);
+  --sidebar-accent: oklch(0.65 0.18 160);
+  --sidebar-accent-foreground: oklch(0.95 0.02 120);
+  --sidebar-border: oklch(0.22 0.02 140);
+  --sidebar-ring: oklch(0.55 0.15 140 / 0.5);
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Added custom animations for Roti Bank */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-green {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.animate-pulse-green {
+  animation: pulse-green 2s infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Added gradient backgrounds for aesthetic appeal */
+.bg-gradient-green {
+  background: linear-gradient(135deg, oklch(0.55 0.15 140) 0%, oklch(0.65 0.18 160) 100%);
+}
+
+.bg-gradient-light-green {
+  background: linear-gradient(135deg, oklch(0.98 0.02 120) 0%, oklch(0.96 0.02 120) 100%);
+}
